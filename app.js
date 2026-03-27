@@ -281,63 +281,75 @@ loginForm.addEventListener('submit', e => {
 });
 
 /* 🔐 Register Handler */
-registerForm.addEventListener('submit', e => {
-  e.preventDefault();
-  const username = document.getElementById('regUsername').value.trim();
-  const password = document.getElementById('regPassword').value.trim();
-  const password2 = document.getElementById('regPassword2').value.trim();
+if (registerForm) {
+  registerForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const username = document.getElementById('regUsername').value.trim();
+    const password = document.getElementById('regPassword').value.trim();
+    const password2 = document.getElementById('regPassword2').value.trim();
 
-  // Validation
-  if (username.length < 3) {
-    registerError.textContent = 'Username must be at least 3 characters.';
-    return;
-  }
+    // Validation
+    if (username.length < 3) {
+      registerError.textContent = 'Username must be at least 3 characters.';
+      return;
+    }
 
-  if (password.length < 4) {
-    registerError.textContent = 'Password must be at least 4 characters.';
-    return;
-  }
+    if (password.length < 4) {
+      registerError.textContent = 'Password must be at least 4 characters.';
+      return;
+    }
 
-  if (password !== password2) {
-    registerError.textContent = 'Passwords do not match.';
-    return;
-  }
+    if (password !== password2) {
+      registerError.textContent = 'Passwords do not match.';
+      return;
+    }
 
-  if (USERS.some(u => u.username === username)) {
-    registerError.textContent = 'Username already exists. Choose another.';
-    return;
-  }
+    if (USERS.some(u => u.username === username)) {
+      registerError.textContent = 'Username already exists. Choose another.';
+      return;
+    }
 
-  // Create new user
-  USERS.push({ username, password });
-  saveUsers();
+    // Create new user
+    USERS.push({ username, password });
+    saveUsers();
 
-  registerError.textContent = '';
-  alert(`✅ Account created! Welcome ${username}. You can now login.`);
+    registerError.textContent = '';
+    alert(`✅ Account created! Welcome ${username}. You can now login.`);
 
-  // Clear form and switch to login
-  registerForm.reset();
-  registerFormContainer.classList.add('hidden');
-  loginFormContainer.classList.remove('hidden');
-  document.getElementById('username').focus();
-});
+    // Clear form and switch to login
+    registerForm.reset();
+    registerFormContainer.classList.add('hidden');
+    loginFormContainer.classList.remove('hidden');
+    document.getElementById('username').focus();
+  });
+} else {
+  console.error('registerForm element not found');
+}
 
 /* 🔄 Toggle Between Login and Register */
-toggleRegisterBtn.addEventListener('click', (e) => {
-  e.preventDefault();
-  loginFormContainer.classList.add('hidden');
-  registerFormContainer.classList.remove('hidden');
-  registerError.textContent = '';
-  document.getElementById('regUsername').focus();
-});
+if (toggleRegisterBtn) {
+  toggleRegisterBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    loginFormContainer.classList.add('hidden');
+    registerFormContainer.classList.remove('hidden');
+    registerError.textContent = '';
+    document.getElementById('regUsername').focus();
+  });
+} else {
+  console.error('toggleRegisterBtn element not found');
+}
 
-toggleLoginBtn.addEventListener('click', (e) => {
-  e.preventDefault();
-  registerFormContainer.classList.add('hidden');
-  loginFormContainer.classList.remove('hidden');
-  loginError.textContent = '';
-  document.getElementById('username').focus();
-});
+if (toggleLoginBtn) {
+  toggleLoginBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    registerFormContainer.classList.add('hidden');
+    loginFormContainer.classList.remove('hidden');
+    loginError.textContent = '';
+    document.getElementById('username').focus();
+  });
+} else {
+  console.error('toggleLoginBtn element not found');
+}
 
 logoutBtn.addEventListener('click', () => {
   dashboard.classList.add('hidden');
