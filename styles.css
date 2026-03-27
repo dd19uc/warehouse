@@ -268,11 +268,33 @@ header h1 {
 .stat-number {
   font-size: 2.2rem;
   font-weight: 700;
-  background: linear-gradient(135deg, var(--text-dark), var(--primary-blue));
+  background: linear-gradient(135deg, var(--primary-blue), var(--light-blue));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   margin: 0;
+}
+
+/* Color-specific numbers for each card */
+.stat-card.low .stat-number {
+  background: linear-gradient(135deg, var(--accent-amber), #fbbf24);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.stat-card.out .stat-number {
+  background: linear-gradient(135deg, var(--accent-red), #f87171);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.stat-card.health .stat-number {
+  background: linear-gradient(135deg, var(--accent-teal), #34d399);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .stat-bar {
