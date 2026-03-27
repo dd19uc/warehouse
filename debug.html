@@ -1,0 +1,24 @@
+<!-- Test diagnostic info -->
+<script>
+    console.log('✅ Page loaded, checking for registration elements...');
+
+    // Check if elements exist
+    setTimeout(() => {
+        const registerForm = document.getElementById('registerForm');
+        const registerError = document.getElementById('registerError');
+        const toggleRegisterBtn = document.getElementById('toggleRegisterBtn');
+        const toggleLoginBtn = document.getElementById('toggleLoginBtn');
+
+        console.log('registerForm:', registerForm ? '✅ Found' : '❌ Not found');
+        console.log('registerError:', registerError ? '✅ Found' : '❌ Not found');
+        console.log('toggleRegisterBtn:', toggleRegisterBtn ? '✅ Found' : '❌ Not found');
+        console.log('toggleLoginBtn:', toggleLoginBtn ? '✅ Found' : '❌ Not found');
+
+        if (toggleRegisterBtn) {
+            console.log('✅ Register button found, click handler should work');
+            toggleRegisterBtn.addEventListener('click', () => {
+                console.log('🎯 Register button clicked!');
+            });
+        }
+    }, 100);
+</script>

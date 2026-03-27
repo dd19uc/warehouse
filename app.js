@@ -13,6 +13,10 @@ function saveUsers() {
 }
 
 loadUsers();
+
+// Debug: Check if elements exist
+console.log('📦 Warehouse App Loading...');
+
 const loginScreen = document.getElementById('loginScreen');
 const dashboard = document.getElementById('dashboard');
 const loginForm = document.getElementById('loginForm');
@@ -24,6 +28,14 @@ const registerFormContainer = document.getElementById('registerFormContainer');
 const toggleRegisterBtn = document.getElementById('toggleRegisterBtn');
 const toggleLoginBtn = document.getElementById('toggleLoginBtn');
 const logoutBtn = document.getElementById('logoutBtn');
+
+// Debug logging
+console.log('✅ registerForm:', !!registerForm);
+console.log('✅ registerError:', !!registerError);
+console.log('✅ toggleRegisterBtn:', !!toggleRegisterBtn);
+console.log('✅ toggleLoginBtn:', !!toggleLoginBtn);
+console.log('✅ loginFormContainer:', !!loginFormContainer);
+console.log('✅ registerFormContainer:', !!registerFormContainer);
 
 const btnAdd = document.getElementById('btnAdd');
 const btnClear = document.getElementById('btnClear');
