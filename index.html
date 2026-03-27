@@ -10,19 +10,47 @@
 
 <body>
   <div class="container" id="loginScreen">
-    <h1>Admin Login</h1>
-    <form id="loginForm">
-      <div class="form-group">
-        <label for="username">Username</label>
-        <input type="text" id="username" placeholder="Enter username" required />
-      </div>
-      <div class="form-group">
-        <label for="password">Password</label>
-        <input type="password" id="password" placeholder="Password" required />
-      </div>
-      <button type="submit" class="btn primary">Login</button>
-      <p id="loginError" class="error"></p>
-    </form>
+    <!-- Login Form -->
+    <div id="loginFormContainer">
+      <h1>Admin Login</h1>
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" placeholder="Enter username" required />
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" placeholder="Password" required />
+        </div>
+        <button type="submit" class="btn primary">Login</button>
+        <p id="loginError" class="error"></p>
+      </form>
+      <p class="auth-toggle">Don't have an account? <button type="button" id="toggleRegisterBtn"
+          class="btn-link">Register here</button></p>
+    </div>
+
+    <!-- Register Form (Hidden by default) -->
+    <div id="registerFormContainer" class="hidden">
+      <h1>Create New Account</h1>
+      <form id="registerForm">
+        <div class="form-group">
+          <label for="regUsername">Username</label>
+          <input type="text" id="regUsername" placeholder="Choose a username" required />
+        </div>
+        <div class="form-group">
+          <label for="regPassword">Password</label>
+          <input type="password" id="regPassword" placeholder="Create a password" required />
+        </div>
+        <div class="form-group">
+          <label for="regPassword2">Confirm Password</label>
+          <input type="password" id="regPassword2" placeholder="Confirm password" required />
+        </div>
+        <button type="submit" class="btn primary">Register</button>
+        <p id="registerError" class="error"></p>
+      </form>
+      <p class="auth-toggle">Already have an account? <button type="button" id="toggleLoginBtn" class="btn-link">Login
+          here</button></p>
+    </div>
   </div>
 
   <div class="container hidden" id="dashboard">

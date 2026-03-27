@@ -58,6 +58,47 @@ body {
   animation: fadeInUp 0.6s ease-out;
 }
 
+/* 🔐 Auth Forms (Login/Register) */
+#loginFormContainer,
+#registerFormContainer {
+  max-width: 400px;
+  margin: 0 auto;
+  animation: fadeInUp 0.6s ease-out;
+}
+
+#loginFormContainer h1,
+#registerFormContainer h1 {
+  text-align: center;
+  background: linear-gradient(135deg, var(--primary-blue), var(--light-blue));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 1.5rem;
+}
+
+.auth-toggle {
+  text-align: center;
+  margin-top: 1.2rem;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--light-blue);
+  cursor: pointer;
+  text-decoration: underline;
+  font-weight: 600;
+  padding: 0;
+  transition: color 0.3s ease;
+  font-size: 0.9rem;
+}
+
+.btn-link:hover {
+  color: var(--primary-blue);
+}
+
 /* 🎬 Core Animations */
 @keyframes fadeInUp {
   from {
