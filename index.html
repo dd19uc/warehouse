@@ -100,6 +100,18 @@
       <button id="btnAdd" class="btn">Add Item</button>
       <button id="btnClear" class="btn">Clear All</button>
       <button id="btnExport" class="btn">Download CSV</button>
+      <button id="btnPrint" class="btn">Print Report</button>
+    </section>
+
+    <!-- 🏷️ Category Filters -->
+    <section class="filter-section">
+      <h3>Filter by Category:</h3>
+      <div class="filter-tabs">
+        <button class="filter-tab active" data-filter="all">All Items</button>
+        <button class="filter-tab" data-filter="Food">Food</button>
+        <button class="filter-tab" data-filter="Equipment">Equipment</button>
+        <button class="filter-tab" data-filter="Supplies">Supplies</button>
+      </div>
     </section>
 
     <section class="form-card hidden" id="itemFormCard">
@@ -147,6 +159,7 @@
             <th>Name</th>
             <th>Category</th>
             <th>Quantity</th>
+            <th>Quick Action</th>
             <th>Minimum</th>
             <th>Status</th>
             <th>Note</th>
@@ -166,6 +179,9 @@
       </div>
     </section>
   </div>
+
+  <!-- 🔔 Toast Notification Container -->
+  <div id="toastContainer" class="toast-container"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="app.js"></script>

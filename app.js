@@ -14,7 +14,22 @@ function saveUsers() {
 
 loadUsers();
 
-// 🔐 Session Management
+// � TOAST NOTIFICATION SYSTEM
+function showToast(message, type = 'info', duration = 3000) {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add('toast-close');
+    setTimeout(() => toast.remove(), 300);
+  }, duration);
+}
+
+// �🔐 Session Management
 function saveSession(username) {
   localStorage.setItem('warehouse-current-user', username);
 }
@@ -90,6 +105,7 @@ let items = [];
 let editMode = false;
 let filteredItems = [];
 let chart = null;
+let currentCategoryFilter = 'all';
 
 function saveItems() { localStorage.setItem('warehouse-items', JSON.stringify(items)); }
 function loadItems() { const raw = localStorage.getItem('warehouse-items'); if (raw) items = JSON.parse(raw); updateItemsTable(); updateStats(); updateChart(); }
@@ -173,9 +189,17 @@ function updateItemsTable() {
     filteredItems = items;
   }
 
+  // Apply category filter
+  if (currentCategoryFilter !== 'all') {
+    filteredItems = filteredItems.filter(item => item.category === currentCategoryFilter);
+  }
+
   itemsBody.innerHTML = '';
   if (!filteredItems.length) {
     emptyMessage.classList.remove('hidden');
+    emptyMessage.textContent = currentCategoryFilter !== 'all'
+      ? `No items in "${currentCategoryFilter}" category.`
+      : 'No items yet. Add one to get started!';
     return;
   }
   emptyMessage.classList.add('hidden');
@@ -201,8 +225,13 @@ function updateItemsTable() {
           </div>
           <span class="progress-text">${item.quantity}</span>
         </div>
-      </td>
-      <td>${item.minStock}</td>
+      </td>      <td>
+        <div class=\"qty-actions\">
+          <button class=\"qty-btn qty-minus\" data-id=\"${item.id}\">−</button>
+          <span class=\"qty-display\">${item.quantity}</span>
+          <button class=\"qty-btn qty-plus\" data-id=\"${item.id}\">+</button>
+        </div>
+      </td>      <td>${item.minStock}</td>
       <td><span class="${status.class}">${status.text}</span></td>
       <td>${item.note || '-'}</td>
       <td>
@@ -231,9 +260,72 @@ function showForm(mode = 'add', item = null) {
     itemIdInput.value = '';
     itemMinStockInput.value = '5';
   }
+  
+  // Focus on name input and setup keyboard shortcuts
+  setTimeout(() => itemNameInput.focus(), 50);
 }
 
-function hideForm() { itemFormCard.classList.add('hidden'); itemForm.reset(); itemIdInput.value = ''; editMode = false; }
+function hideForm() { 
+  itemFormCard.classList.add('hidden'); 
+  itemForm.reset(); 
+  itemIdInput.value = ''; 
+  editMode = false; 
+}
+
+// 📄 PRINT REPORT FUNCTION
+function printReport() {
+  const printWindow = window.open('', '', 'height=800,width=1000');
+  const timestamp = new Date().toLocaleString();
+  
+  let itemsHTML = '<tr><th>Item</th><th>Category</th><th>Qty</th><th>Min</th><th>Status</th></tr>';
+  items.forEach(item => {
+    const status = getItemStatus(item.quantity, item.minStock);
+    itemsHTML += `<tr>
+      <td>${item.name}</td>
+      <td>${item.category}</td>
+      <td>${item.quantity}</td>
+      <td>${item.minStock}</td>
+      <td>${status.text}</td>
+    </tr>`;
+  });
+  
+  const total = items.length;
+  const lowStock = items.filter(i => i.quantity > 0 && i.quantity <= i.minStock).length;
+  const outOfStock = items.filter(i => i.quantity <= 0).length;
+  let totalHealth = 0;
+  if (items.length > 0) {
+    items.forEach(item => {
+      const percentage = getStockPercentage(item.quantity, item.minStock);
+      totalHealth += percentage;
+    });
+    totalHealth = Math.round(totalHealth / items.length);
+  }
+  
+  printWindow.document.write(`
+    <html><head><title>Warehouse Inventory Report</title>
+    <style>
+      body { font-family: Arial, sans-serif; padding: 20px; }
+      h1 { color: #1f5db2; }
+      .summary { background: #f0f8ff; padding: 15px; border-radius: 5px; margin: 20px 0; }
+      table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+      th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+      th { background: #1f5db2; color: white; }
+      .timestamp { color: #666; font-size: 0.9em; }
+    </style>
+    </head><body>
+    <h1>📦 Warehouse Inventory Report</h1>
+    <p class="timestamp">Generated: ${timestamp}</p>
+    <div class="summary">
+      <p><strong>Total Items:</strong> ${total}</p>
+      <p><strong>Low Stock Items:</strong> ${lowStock}</p>
+      <p><strong>Out of Stock:</strong> ${outOfStock}</p>
+      <p><strong>Overall Health:</strong> ${totalHealth}%</p>
+    </div>
+    <table>${itemsHTML}</table>
+  </body></html>`);
+  printWindow.document.close();
+  printWindow.print();
+}
 
 /* 📊 Chart.js Integration */
 function updateChart() {
@@ -304,11 +396,13 @@ loginForm.addEventListener('submit', e => {
   if (USERS.some(u => u.username === username && u.password === password)) {
     loginError.textContent = '';
     saveSession(username);
+    showToast(`👋 Welcome back, ${username}!`, 'success');
     loginScreen.classList.add('hidden');
     dashboard.classList.remove('hidden');
     loadItems();
   } else {
     loginError.textContent = 'Username or password is incorrect.';
+    showToast('❌ Login failed. Please try again.', 'error');
   }
 });
 
@@ -323,21 +417,25 @@ if (registerForm) {
     // Validation
     if (username.length < 3) {
       registerError.textContent = 'Username must be at least 3 characters.';
+      showToast('⚠️ Username must be at least 3 characters.', 'warning');
       return;
     }
 
     if (password.length < 4) {
       registerError.textContent = 'Password must be at least 4 characters.';
+      showToast('⚠️ Password must be at least 4 characters.', 'warning');
       return;
     }
 
     if (password !== password2) {
       registerError.textContent = 'Passwords do not match.';
+      showToast('⚠️ Passwords do not match.', 'warning');
       return;
     }
 
     if (USERS.some(u => u.username === username)) {
       registerError.textContent = 'Username already exists. Choose another.';
+      showToast('⚠️ Username already exists.', 'warning');
       return;
     }
 
@@ -346,7 +444,7 @@ if (registerForm) {
     saveUsers();
 
     registerError.textContent = '';
-    alert(`✅ Account created! Welcome ${username}. You can now login.`);
+    showToast(`✅ Account created! Welcome ${username}!`, 'success');
 
     // Clear form and switch to login
     registerForm.reset();
@@ -387,6 +485,7 @@ logoutBtn.addEventListener('click', () => {
   clearSession();
   document.getElementById('username').value = '';
   document.getElementById('password').value = '';
+  showToast('👋 Logged out successfully!', 'success');
   dashboard.classList.add('hidden');
   loginScreen.classList.remove('hidden');
 });
@@ -394,7 +493,35 @@ logoutBtn.addEventListener('click', () => {
 btnAdd.addEventListener('click', () => showForm('add'));
 cancelBtn.addEventListener('click', hideForm);
 
+// 🎯 Keyboard Shortcuts
+document.addEventListener('keydown', (e) => {
+  // Esc to close form
+  if (e.key === 'Escape' && !itemFormCard.classList.contains('hidden')) {
+    hideForm();
+  }
+  // Ctrl+Enter to submit form
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !itemFormCard.classList.contains('hidden')) {
+    itemForm.dispatchEvent(new Event('submit'));
+  }
+});
+
 searchInput.addEventListener('input', updateItemsTable);
+
+// 🏷️ Category Filter
+document.querySelectorAll('.filter-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    currentCategoryFilter = tab.dataset.filter;
+    updateItemsTable();
+  });
+});
+
+// 📄 Print Button
+const btnPrint = document.getElementById('btnPrint');
+if (btnPrint) {
+  btnPrint.addEventListener('click', printReport);
+}
 
 itemForm.addEventListener('submit', e => {
   e.preventDefault();
@@ -404,15 +531,19 @@ itemForm.addEventListener('submit', e => {
   const minStock = Number(itemMinStockInput.value);
   const note = itemNoteInput.value.trim();
 
-  if (!name || !category || quantity < 0 || minStock < 0) return;
+  if (!name || !category || quantity < 0 || minStock < 0) {
+    showToast('⚠️ Please fill all required fields correctly.', 'warning');
+    return;
+  }
 
-  if (editMode) {
-    const id = itemIdInput.value;
-    const idx = items.findIndex(i => i.id === id);
-    if (idx > -1) {
-      items[idx] = { ...items[idx], name, category, quantity, minStock, note };
+  // Check for duplicate items (when adding new)
+  if (!editMode) {
+    const isDuplicate = items.some(i => i.name.toLowerCase() === name.toLowerCase() && i.category === category);
+    if (isDuplicate) {
+      showToast(`⚠️ "${name}" already exists in ${category}!`, 'warning');
+      return;
     }
-  } else {
+    
     items.push({
       id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
       name,
@@ -421,7 +552,16 @@ itemForm.addEventListener('submit', e => {
       minStock,
       note,
     });
+    showToast(`✅ "${name}" added successfully!`, 'success');
+  } else {
+    const id = itemIdInput.value;
+    const idx = items.findIndex(i => i.id === id);
+    if (idx > -1) {
+      items[idx] = { ...items[idx], name, category, quantity, minStock, note };
+      showToast(`✅ "${name}" updated successfully!`, 'success');
+    }
   }
+
   saveItems();
   updateItemsTable();
   updateStats();
@@ -433,36 +573,65 @@ itemForm.addEventListener('submit', e => {
 itemsBody.addEventListener('click', e => {
   const btn = e.target.closest('button');
   if (!btn) return;
+  
   const id = btn.dataset.id;
+  
+  // Handle quick action buttons (+/-)
+  if (btn.classList.contains('qty-plus') || btn.classList.contains('qty-minus')) {
+    const item = items.find(i => i.id === id);
+    if (item) {
+      const change = btn.classList.contains('qty-plus') ? 1 : -1;
+      const newQty = Math.max(0, item.quantity + change);
+      item.quantity = newQty;
+      saveItems();
+      updateItemsTable();
+      updateStats();
+      updateChart();
+      updateAlerts();
+      
+      const action = btn.classList.contains('qty-plus') ? 'increased' : 'decreased';
+      showToast(`✅ "${item.name}" quantity ${action} to ${newQty}`, 'success', 2000);
+    }
+    return;
+  }
+  
   if (btn.dataset.action === 'edit') {
     const item = items.find(i => i.id === id);
     if (item) showForm('edit', item);
   }
   if (btn.dataset.action === 'delete') {
-    if (confirm('Are you sure you want to delete the item?')) {
+    const item = items.find(i => i.id === id);
+    if (confirm(`Delete "${item.name}"?`)) {
       items = items.filter(i => i.id !== id);
       saveItems();
       updateItemsTable();
       updateStats();
       updateChart();
       updateAlerts();
+      showToast(`🗑️ "${item.name}" deleted`, 'warning', 2000);
     }
   }
 });
 
 btnClear.addEventListener('click', () => {
-  if (items.length && confirm('Are you sure you want to clear all items?')) {
+  if (items.length && confirm('Are you sure you want to delete ALL items? This cannot be undone.')) {
     items = [];
     saveItems();
     updateItemsTable();
     updateStats();
     updateChart();
     updateAlerts();
+    showToast('🗑️ All items cleared! Starting fresh.', 'warning');
+  } else if (!items.length) {
+    showToast('ℹ️ Inventory is already empty.', 'info');
   }
 });
 
 btnExport.addEventListener('click', () => {
-  if (!items.length) return alert('No items to export.');
+  if (!items.length) {
+    showToast('⚠️ No items to export.', 'warning');
+    return;
+  }
   const csvRows = ['Name,Category,Quantity,Minimum Stock,Note'];
   items.forEach(i => {
     const line = [i.name, i.category, i.quantity, i.minStock, i.note || ''].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
@@ -472,9 +641,10 @@ btnExport.addEventListener('click', () => {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'warehouse-items.csv';
+  a.download = `warehouse-${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
+  showToast(`✅ Exported ${items.length} items to CSV!`, 'success');
 });
 
 loadItems();
