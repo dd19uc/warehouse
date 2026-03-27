@@ -14,8 +14,27 @@ function saveUsers() {
 
 loadUsers();
 
-// Debug: Check if elements exist
-console.log('📦 Warehouse App Loading...');
+// 🔐 Session Management
+function saveSession(username) {
+  localStorage.setItem('warehouse-current-user', username);
+}
+
+function loadSession() {
+  const username = localStorage.getItem('warehouse-current-user');
+  return username;
+}
+
+function clearSession() {
+  localStorage.removeItem('warehouse-current-user');
+}
+
+// Check if user is already logged in on page load
+const currentUser = loadSession();
+if (currentUser && USERS.some(u => u.username === currentUser)) {
+  loginScreen.classList.add('hidden');
+  dashboard.classList.remove('hidden');
+  loadItems();
+}
 
 const loginScreen = document.getElementById('loginScreen');
 const dashboard = document.getElementById('dashboard');
@@ -284,6 +303,7 @@ loginForm.addEventListener('submit', e => {
 
   if (USERS.some(u => u.username === username && u.password === password)) {
     loginError.textContent = '';
+    saveSession(username);
     loginScreen.classList.add('hidden');
     dashboard.classList.remove('hidden');
     loadItems();
@@ -364,6 +384,9 @@ if (toggleLoginBtn) {
 }
 
 logoutBtn.addEventListener('click', () => {
+  clearSession();
+  document.getElementById('username').value = '';
+  document.getElementById('password').value = '';
   dashboard.classList.add('hidden');
   loginScreen.classList.remove('hidden');
 });
