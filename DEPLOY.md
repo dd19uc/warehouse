@@ -63,7 +63,7 @@ git push -u origin main
 
 Your site will be available at:
 ```
-https://YOUR_USERNAME.github.io/warehouse/
+https://dd19uc.github.io/warehouse/?
 ```
 
 ✅ **That's it! Your website is now live!**

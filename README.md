@@ -28,7 +28,7 @@ A modern, animated inventory management application with real-time stock trackin
 - **Password:** `2005`
 
 ### Live Demo
-Visit the application at: https://yourgithubusername.github.io/warehouse/
+Visit the application at: https://dd19uc.github.io/warehouse/
 
 ### Running Locally
 ```bash
