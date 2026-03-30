@@ -880,3 +880,106 @@ th {
     max-width: 100%;
   }
 }
+
+/* 📱 Extra Small Mobile (< 480px) */
+@media (max-width: 480px) {
+  body {
+    padding: 0.5rem;
+  }
+
+  .container {
+    padding: 0.75rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+
+  .stat-card {
+    padding: 0.8rem;
+  }
+
+  .stat-number {
+    font-size: 1.5rem;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+  }
+
+  .stat-bar {
+    height: 6px;
+  }
+
+  header {
+    gap: 0.5rem;
+  }
+
+  header h1 {
+    font-size: 1.1rem;
+  }
+
+  .buttons-row {
+    gap: 0.4rem;
+  }
+
+  .btn {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.85rem;
+  }
+
+  .search-bar {
+    margin-bottom: 0.5rem;
+  }
+
+  .search-bar input {
+    padding: 0.5rem;
+  }
+
+  table {
+    font-size: 0.7rem;
+  }
+
+  th,
+  td {
+    padding: 0.3rem 0.2rem;
+  }
+
+  .list-item {
+    flex-wrap: wrap;
+  }
+
+  .item-actions button {
+    padding: 0.4rem 0.6rem;
+  }
+
+  .modal {
+    width: 95%;
+  }
+
+  .form-card {
+    padding: 0.8rem;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    font-size: 16px;
+    /* Prevent zoom on iOS */
+  }
+
+  .toast {
+    padding: 0.8rem;
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .alerts-container {
+    max-height: 150px;
+  }
+
+  .alert-item {
+    padding: 0.5rem;
+  }
+}

@@ -1,21 +1,73 @@
-let USERS = [
-  { username: 'Crownee', password: '2005' },
-  { username: 'crowne', password: '2005' }
-];
+// --- API Helpers ---
+const API_BASE = 'http://localhost:4000/api';
 
-// Load users from localStorage
-function loadUsers() {
-  const stored = localStorage.getItem('warehouse-users');
-  if (stored) {
-    USERS = JSON.parse(stored);
-    // Ensure default users are always available if not present
-    if (!USERS.some(u => u.username === 'Crownee')) USERS.push({ username: 'Crownee', password: '2005' });
-    if (!USERS.some(u => u.username === 'crowne')) USERS.push({ username: 'crowne', password: '2005' });
+async function apiLogin(username, password) {
+  const res = await fetch(`${API_BASE}/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password })
+  });
+  return res.json();
+}
+
+async function apiRegister(username, password) {
+  const res = await fetch(`${API_BASE}/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password })
+  });
+  return res.json();
+}
+
+// --- Session Management ---
+const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+let sessionTimer = null;
+
+function saveSession(user) {
+  const sessionData = {
+    ...user,
+    loginTime: Date.now()
+  };
+  localStorage.setItem('warehouse-current-user', JSON.stringify(sessionData));
+  resetSessionTimer();
+}
+
+function loadSession() {
+  const raw = localStorage.getItem('warehouse-current-user');
+  if (!raw) return null;
+  try {
+    const user = JSON.parse(raw);
+    if (user.loginTime && Date.now() - user.loginTime > SESSION_TIMEOUT) {
+      clearSession();
+      showToast('⏱️ Your session has expired. Please log in again.', 'warning');
+      window.location.reload();
+      return null;
+    }
+    resetSessionTimer();
+    return user;
+  } catch {
+    return null;
   }
 }
 
-function saveUsers() {
-  localStorage.setItem('warehouse-users', JSON.stringify(USERS));
+function clearSession() {
+  localStorage.removeItem('warehouse-current-user');
+  if (sessionTimer) clearTimeout(sessionTimer);
+}
+
+function resetSessionTimer() {
+  if (sessionTimer) clearTimeout(sessionTimer);
+  const user = loadSession();
+  if (user && user.loginTime) {
+    const timeUntilExpiry = SESSION_TIMEOUT - (Date.now() - user.loginTime);
+    if (timeUntilExpiry > 0) {
+      sessionTimer = setTimeout(() => {
+        clearSession();
+        showToast('⏱️ Your session has expired. Please log in again.', 'warning');
+        window.location.reload();
+      }, timeUntilExpiry);
+    }
+  }
 }
 
 //  TOAST NOTIFICATION SYSTEM
@@ -34,18 +86,7 @@ function showToast(message, type = 'info', duration = 3000) {
   }, duration);
 }
 
-// 🔐 Session Management
-function saveSession(username) {
-  localStorage.setItem('warehouse-current-user', username);
-}
 
-function loadSession() {
-  return localStorage.getItem('warehouse-current-user');
-}
-
-function clearSession() {
-  localStorage.removeItem('warehouse-current-user');
-}
 
 // ✅ DOM Elements
 const loginScreen = document.getElementById('loginScreen');
@@ -96,13 +137,60 @@ let filteredItems = [];
 let chart = null;
 let currentCategoryFilter = 'all';
 
-function saveItems() { localStorage.setItem('warehouse-items', JSON.stringify(items)); }
-function loadItems() { 
-  const raw = localStorage.getItem('warehouse-items'); 
-  if (raw) items = JSON.parse(raw); 
-  updateItemsTable(); 
-  updateStats(); 
-  updateChart(); 
+
+// --- Item API ---
+async function apiGetItems(user_id) {
+  const res = await fetch(`${API_BASE}/items?user_id=${encodeURIComponent(user_id)}`);
+  return res.json();
+}
+
+async function apiAddItem(item) {
+  const res = await fetch(`${API_BASE}/items`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(item)
+  });
+  return res.json();
+}
+
+async function apiUpdateItem(id, item) {
+  const res = await fetch(`${API_BASE}/items/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(item)
+  });
+  return res.json();
+}
+
+async function apiDeleteItem(id) {
+  const res = await fetch(`${API_BASE}/items/${id}`, { method: 'DELETE' });
+  return res.json();
+}
+
+async function loadItems() {
+  const currentUser = loadSession();
+  if (!currentUser || !currentUser.id) {
+    items = [];
+    updateItemsTable();
+    updateStats();
+    updateChart();
+    updateAlerts();
+    return;
+  }
+  try {
+    const data = await apiGetItems(currentUser.id);
+    items = Array.isArray(data) ? data.map(item => ({
+      ...item,
+      minStock: item.minStock ?? item.min_stock ?? 0,
+      quantity: Number(item.quantity ?? 0),
+      min_stock: item.minStock ?? item.min_stock ?? 0
+    })) : [];
+  } catch {
+    items = [];
+  }
+  updateItemsTable();
+  updateStats();
+  updateChart();
   updateAlerts();
 }
 
@@ -113,8 +201,10 @@ function getItemStatus(quantity, minStock) {
 }
 
 function getStockPercentage(quantity, minStock) {
-  if (minStock === 0) return 100;
-  return Math.min(100, Math.max(0, (quantity / minStock) * 100));
+  const q = Number(quantity);
+  const m = Number(minStock);
+  if (isNaN(q) || isNaN(m) || m === 0) return 100;
+  return Math.min(100, Math.max(0, (q / m) * 100));
 }
 
 function updateStats() {
@@ -327,7 +417,7 @@ function updateChart() {
   const chartCanvas = document.getElementById('categoryChart');
   if (!chartCanvas) return;
   const ctx = chartCanvas.getContext('2d');
-  
+
   const categoryCount = {};
   const categoryColors = {
     'Food': '#10b981',
@@ -393,38 +483,44 @@ function updateChart() {
 
 // ✅ EVENT LISTENERS
 if (loginForm) {
-  loginForm.addEventListener('submit', e => {
+  loginForm.addEventListener('submit', async e => {
     e.preventDefault();
     const usernameInput = document.getElementById('username');
     const passwordInput = document.getElementById('password');
     if (!usernameInput || !passwordInput) return;
-    
+
     const username = usernameInput.value.trim();
     const password = passwordInput.value.trim();
 
-    if (USERS.some(u => u.username === username && u.password === password)) {
-      if (loginError) loginError.textContent = '';
-      saveSession(username);
-      showToast(`👋 Welcome back, ${username}!`, 'success');
-      if (loginScreen) loginScreen.classList.add('hidden');
-      if (dashboard) dashboard.classList.remove('hidden');
-      loadItems();
-    } else {
-      if (loginError) loginError.textContent = 'Username or password is incorrect.';
+    try {
+      const result = await apiLogin(username, password);
+      if (result.success && result.user) {
+        if (loginError) loginError.textContent = '';
+        saveSession(result.user);
+        showToast(`👋 Welcome back, ${username}!`, 'success');
+        if (loginScreen) loginScreen.classList.add('hidden');
+        if (dashboard) dashboard.classList.remove('hidden');
+        loadItems();
+      } else {
+        if (loginError) loginError.textContent = result.message || 'Username or password is incorrect.';
+        showToast('❌ Login failed. Please try again.', 'error');
+      }
+    } catch (err) {
+      if (loginError) loginError.textContent = 'Server error. Please try again.';
       showToast('❌ Login failed. Please try again.', 'error');
     }
   });
 }
 
 if (registerForm) {
-  registerForm.addEventListener('submit', e => {
+  registerForm.addEventListener('submit', async e => {
     e.preventDefault();
     const regUsernameElem = document.getElementById('regUsername');
     const regPasswordElem = document.getElementById('regPassword');
     const regPassword2Elem = document.getElementById('regPassword2');
-    
+
     if (!regUsernameElem || !regPasswordElem || !regPassword2Elem) return;
-    
+
     const username = regUsernameElem.value.trim();
     const password = regPasswordElem.value.trim();
     const password2 = regPassword2Elem.value.trim();
@@ -447,23 +543,24 @@ if (registerForm) {
       return;
     }
 
-    if (USERS.some(u => u.username === username)) {
-      if (registerError) registerError.textContent = 'Username already exists. Choose another.';
-      showToast('⚠️ Username already exists.', 'warning');
-      return;
+    try {
+      const result = await apiRegister(username, password);
+      if (result.success && result.user) {
+        if (registerError) registerError.textContent = '';
+        showToast(`✅ Account created! Welcome ${username}!`, 'success');
+        registerForm.reset();
+        if (registerFormContainer) registerFormContainer.classList.add('hidden');
+        if (loginFormContainer) loginFormContainer.classList.remove('hidden');
+        const usernameField = document.getElementById('username');
+        if (usernameField) usernameField.focus();
+      } else {
+        if (registerError) registerError.textContent = result.message || 'Registration failed.';
+        showToast('⚠️ ' + (result.message || 'Registration failed.'), 'warning');
+      }
+    } catch (err) {
+      if (registerError) registerError.textContent = 'Server error. Please try again.';
+      showToast('⚠️ Registration failed. Please try again.', 'warning');
     }
-
-    USERS.push({ username, password });
-    saveUsers();
-
-    if (registerError) registerError.textContent = '';
-    showToast(`✅ Account created! Welcome ${username}!`, 'success');
-
-    registerForm.reset();
-    if (registerFormContainer) registerFormContainer.classList.add('hidden');
-    if (loginFormContainer) loginFormContainer.classList.remove('hidden');
-    const usernameField = document.getElementById('username');
-    if (usernameField) usernameField.focus();
   });
 }
 
@@ -537,106 +634,100 @@ if (btnPrint) {
 }
 
 if (itemForm) {
-  itemForm.addEventListener('submit', e => {
+  itemForm.addEventListener('submit', async e => {
     e.preventDefault();
     const name = itemNameInput.value.trim();
     const category = itemCategoryInput.value;
     const quantity = Number(itemQuantityInput.value);
     const minStock = Number(itemMinStockInput.value);
     const note = itemNoteInput.value.trim();
+    const currentUser = loadSession();
 
     if (!name || !category || isNaN(quantity) || quantity < 0 || isNaN(minStock) || minStock < 0) {
       showToast('⚠️ Please fill all required fields correctly.', 'warning');
       return;
     }
-
-    if (!editMode) {
-      const isDuplicate = items.some(i => i.name.toLowerCase() === name.toLowerCase() && i.category === category);
-      if (isDuplicate) {
-        showToast(`⚠️ "${name}" already exists in ${category}!`, 'warning');
-        return;
-      }
-
-      items.push({
-        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        name,
-        category,
-        quantity,
-        minStock,
-        note,
-      });
-      showToast(`✅ "${name}" added successfully!`, 'success');
-    } else {
-      const id = itemIdInput.value;
-      const idx = items.findIndex(i => i.id === id);
-      if (idx > -1) {
-        items[idx] = { ...items[idx], name, category, quantity, minStock, note };
-        showToast(`✅ "${name}" updated successfully!`, 'success');
-      }
+    if (!currentUser || !currentUser.id) {
+      showToast('❌ Not logged in.', 'error');
+      return;
     }
 
-    saveItems();
-    updateItemsTable();
-    updateStats();
-    updateChart();
-    updateAlerts();
+    if (!editMode) {
+      // Check for duplicate on client (optional, server will allow same name)
+      // const isDuplicate = items.some(i => i.name.toLowerCase() === name.toLowerCase() && i.category === category);
+      // if (isDuplicate) {
+      //   showToast(`⚠️ "${name}" already exists in ${category}!`, 'warning');
+      //   return;
+      // }
+      try {
+        await apiAddItem({ name, category, quantity, min_stock: minStock, note, user_id: currentUser.id });
+        showToast(`✅ "${name}" added successfully!`, 'success');
+      } catch {
+        showToast('❌ Failed to add item.', 'error');
+      }
+    } else {
+      const id = itemIdInput.value;
+      try {
+        await apiUpdateItem(id, { name, category, quantity, min_stock: minStock, note });
+        showToast(`✅ "${name}" updated successfully!`, 'success');
+      } catch {
+        showToast('❌ Failed to update item.', 'error');
+      }
+    }
+    await loadItems();
     hideForm();
   });
 }
 
 if (itemsBody) {
-  itemsBody.addEventListener('click', e => {
+  itemsBody.addEventListener('click', async e => {
     const btn = e.target.closest('button');
     if (!btn) return;
 
     const id = btn.dataset.id;
 
     if (btn.classList.contains('qty-plus') || btn.classList.contains('qty-minus')) {
-      const item = items.find(i => i.id === id);
+      const item = items.find(i => i.id == id);
       if (item) {
         const change = btn.classList.contains('qty-plus') ? 1 : -1;
         const newQty = Math.max(0, item.quantity + change);
-        item.quantity = newQty;
-        saveItems();
-        updateItemsTable();
-        updateStats();
-        updateChart();
-        updateAlerts();
-
-        const action = btn.classList.contains('qty-plus') ? 'increased' : 'decreased';
-        showToast(`✅ "${item.name}" quantity ${action} to ${newQty}`, 'success', 2000);
+        try {
+          await apiUpdateItem(id, { ...item, quantity: newQty });
+          showToast(`✅ "${item.name}" quantity ${btn.classList.contains('qty-plus') ? 'increased' : 'decreased'} to ${newQty}`, 'success', 2000);
+        } catch {
+          showToast('❌ Failed to update quantity.', 'error');
+        }
+        await loadItems();
       }
       return;
     }
 
     if (btn.dataset.action === 'edit') {
-      const item = items.find(i => i.id === id);
+      const item = items.find(i => i.id == id);
       if (item) showForm('edit', item);
     }
     if (btn.dataset.action === 'delete') {
-      const item = items.find(i => i.id === id);
-      if (confirm(`Delete "${item.name}"?`)) {
-        items = items.filter(i => i.id !== id);
-        saveItems();
-        updateItemsTable();
-        updateStats();
-        updateChart();
-        updateAlerts();
-        showToast(`🗑️ "${item.name}" deleted`, 'warning', 2000);
+      const item = items.find(i => i.id == id);
+      if (item && confirm(`Delete "${item.name}"?`)) {
+        try {
+          await apiDeleteItem(id);
+          showToast(`🗑️ "${item.name}" deleted`, 'warning', 2000);
+        } catch {
+          showToast('❌ Failed to delete item.', 'error');
+        }
+        await loadItems();
       }
     }
   });
 }
 
 if (btnClear) {
-  btnClear.addEventListener('click', () => {
+  btnClear.addEventListener('click', async () => {
     if (items.length && confirm('Are you sure you want to delete ALL items? This cannot be undone.')) {
-      items = [];
-      saveItems();
-      updateItemsTable();
-      updateStats();
-      updateChart();
-      updateAlerts();
+      for (const item of items) {
+        try { await apiDeleteItem(item.id); } catch { }
+      }
+      await loadItems();
       showToast('🗑️ All items cleared! Starting fresh.', 'warning');
     } else if (!items.length) {
       showToast('ℹ️ Inventory is already empty.', 'info');
@@ -668,31 +759,27 @@ if (btnExport) {
 
 // 🚀 INITIALIZATION
 function init() {
-  console.log('🚀 Warehouse System Initializing...');
-  try {
-    loadUsers();
-    console.log('✅ Users loaded:', USERS.length);
-    
-    const currentUser = loadSession();
-    console.log('👤 Current session user:', currentUser);
-
-    if (currentUser && USERS.some(u => u.username === currentUser)) {
-      console.log('🔓 Active session found for:', currentUser);
+  // Hide both screens initially to prevent blink
+  if (loginScreen) loginScreen.classList.add('hidden');
+  if (dashboard) dashboard.classList.add('hidden');
+  setTimeout(() => {
+    try {
+      let currentUser = loadSession();
       if (loginScreen && dashboard) {
-        loginScreen.classList.add('hidden');
-        dashboard.classList.remove('hidden');
-      } else {
-        console.error('❌ Could not find loginScreen or dashboard elements');
+        if (currentUser && currentUser.username && currentUser.id) {
+          loginScreen.classList.add('hidden');
+          dashboard.classList.remove('hidden');
+        } else {
+          loginScreen.classList.remove('hidden');
+          dashboard.classList.add('hidden');
+        }
       }
-    } else {
-      console.log('🔒 No active session or user not found.');
+      loadItems();
+    } catch (err) {
+      if (loginScreen) loginScreen.classList.remove('hidden');
+      if (dashboard) dashboard.classList.add('hidden');
     }
-    
-    loadItems();
-    console.log('📦 Items loaded:', items.length);
-  } catch (err) {
-    console.error('💥 Initialization failed:', err);
-  }
+  }, 0);
 }
 
 init();
